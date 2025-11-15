@@ -4,30 +4,40 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { motion } from "framer-motion";
 import { ReferredUser } from "../types/referral";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
-  const { user, token } = useAuthStore();
+  const router = useRouter();
+  const { user, token, logout } = useAuthStore();
+
+  // 🔒 PROTECT ROUTE (Redirect if not logged in)
+  useEffect(() => {
+    if (!token) {
+      router.push("/login");
+    }
+  }, [token, router]);
 
   const [stats, setStats] = useState({
-  referredCount: 0,
-  convertedCount: 0,
-  credits: 0,
-  referralCode: "",
-  referredList: [] as ReferredUser[],
-});
+    referredCount: 0,
+    convertedCount: 0,
+    credits: 0,
+    referralCode: "",
+    referredList: [] as ReferredUser[],
+  });
 
   const [copyStatus, setCopyStatus] = useState("");
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
   // ---------------------------------------------
-  // Fetch Dashboard Data from Backend (later)
+  // Fetch Dashboard Data from Backend
   // ---------------------------------------------
   const loadDashboard = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await res.json();
 
       if (res.ok) {
@@ -44,12 +54,12 @@ export default function DashboardPage() {
     }
   };
 
-useEffect(() => {
-  const fetchData = async () => {
-    await loadDashboard();
-  };
-  fetchData();
-}, []);
+  useEffect(() => {
+    const fetchData = async () => {
+      await loadDashboard();
+    };
+    fetchData();
+  }, []);
 
   const referralLink = `${typeof window !== "undefined" ? window.location.origin : ""}/register?r=${stats.referralCode}`;
 
@@ -87,8 +97,23 @@ useEffect(() => {
     }
   };
 
+  // If still loading or redirecting
+  if (!token) return null;
+
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
+    <div className="min-h-screen p-6 bg-gray-100 relative">
+
+      {/* LOGOUT BUTTON */}
+      <button
+        onClick={() => {
+          logout();
+          router.push("/login");
+        }}
+        className="absolute top-4 right-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      >
+        Logout
+      </button>
+
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
       {/* Referral Link Card */}
@@ -170,25 +195,24 @@ useEffect(() => {
         )}
 
         <div className="space-y-2">
-  {stats.referredList.map((ref: ReferredUser, index: number) => (
-    <div
-      key={index}
-      className="p-3 border rounded flex justify-between"
-    >
-      <p>{ref.email}</p>
-      <p
-        className={`${
-          ref.status === "converted"
-            ? "text-green-600"
-            : "text-yellow-600"
-        }`}
-      >
-        {ref.status}
-      </p>
-    </div>
-  ))}
-</div>
-
+          {stats.referredList.map((ref: ReferredUser, index: number) => (
+            <div
+              key={index}
+              className="p-3 border rounded flex justify-between"
+            >
+              <p>{ref.email}</p>
+              <p
+                className={`${
+                  ref.status === "converted"
+                    ? "text-green-600"
+                    : "text-yellow-600"
+                }`}
+              >
+                {ref.status}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
