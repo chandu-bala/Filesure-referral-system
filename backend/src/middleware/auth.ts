@@ -20,7 +20,9 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
     // attach user (without passwordHash)
-    User.findById(payload.userId)
+   
+
+     User.findById(payload.userId)
       .select("-passwordHash")
       .then((user) => {
         if (!user) return res.status(401).json({ error: "Invalid token user" });
